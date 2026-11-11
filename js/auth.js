@@ -18,8 +18,34 @@ const AuthManager = {
 
   // Seed two distinct pre-configured demo users so multi-user switching can be tested immediately
   seedDefaultUsersIfEmpty() {
-    const existing = localStorage.getItem(AUTH_KEYS.USERS);
-    if (!existing) {
+    // Purge any legacy Dr. Priya Sharma accounts or stored keys
+    try {
+      const existing = localStorage.getItem(AUTH_KEYS.USERS);
+      if (existing) {
+        let users = JSON.parse(existing);
+        const filtered = users.filter(u => u.id !== 'user_priya' && u.username !== 'priyaclinical' && u.email !== 'priya@fitpulse.demo');
+        if (filtered.length !== users.length) {
+          localStorage.setItem(AUTH_KEYS.USERS, JSON.stringify(filtered));
+        }
+      }
+      // Purge any storage keys tied to user_priya
+      Object.keys(localStorage).forEach(k => {
+        if (k.includes('user_priya') || k.includes('priyaclinical')) {
+          localStorage.removeItem(k);
+        }
+      });
+      // Clear session if active session was user_priya
+      const sess = localStorage.getItem(AUTH_KEYS.SESSION);
+      if (sess && (sess.includes('user_priya') || sess.includes('priyaclinical'))) {
+        localStorage.removeItem(AUTH_KEYS.SESSION);
+        sessionStorage.removeItem(AUTH_KEYS.SESSION);
+      }
+    } catch (e) {
+      console.warn('Purge notice:', e);
+    }
+
+    const currentUsers = localStorage.getItem(AUTH_KEYS.USERS);
+    if (!currentUsers) {
       const defaultUsers = [
         {
           id: 'user_alex',
@@ -36,28 +62,12 @@ const AuthManager = {
           avatarInitials: 'AR',
           avatarColor: '#059669', // Emerald
           createdAt: '2026-10-15T08:00:00.000Z'
-        },
-        {
-          id: 'user_priya',
-          name: 'Dr. Priya Sharma',
-          email: 'priya@fitpulse.demo',
-          username: 'priyaclinical',
-          password: 'password123',
-          goal: 'endurance',
-          condition: 'diabetes_t2',
-          gender: 'female',
-          age: 34,
-          weight: 64,
-          height: 165,
-          avatarInitials: 'PS',
-          avatarColor: '#0284c7', // Cyan
-          createdAt: '2026-10-20T10:30:00.000Z'
         }
       ];
 
       localStorage.setItem(AUTH_KEYS.USERS, JSON.stringify(defaultUsers));
 
-      // Seed account-specific data for Alex
+      // Seed account-specific sample data for Alex
       this.seedUserAccountData('user_alex', {
         profile: {
           age: 27,
@@ -79,30 +89,6 @@ const AuthManager = {
         },
         stepGoal: 10000,
         todaySteps: 8760
-      });
-
-      // Seed account-specific clinical diabetic data for Dr. Priya
-      this.seedUserAccountData('user_priya', {
-        profile: {
-          age: 34,
-          gender: 'female',
-          height: 165,
-          weight: 64,
-          targetWeight: 60,
-          activityLevel: 1.4,
-          goal: 'endurance',
-          condition: 'diabetes_t2',
-          dietPref: 'vegetarian'
-        },
-        targets: {
-          calories: 1750,
-          protein: 110,
-          carbs: 180,
-          fat: 45,
-          waterLiters: 3.0
-        },
-        stepGoal: 12000,
-        todaySteps: 11420
       });
     }
   },
@@ -135,12 +121,6 @@ const AuthManager = {
         { id: 'pr_a3', exercise: 'Conventional Deadlift', weightKg: 180, reps: 2, estimated1RM: 192.0, date: '2026-10-28', rpe: 9.5, notes: 'Hook grip lockout' }
       ];
       localStorage.setItem(`fitpulse_u_${userId}_fitpulse_prs`, JSON.stringify(alexPRs));
-    } else if (userId === 'user_priya') {
-      const priyaPRs = [
-        { id: 'pr_p1', exercise: 'Barbell Back Squat', weightKg: 75, reps: 5, estimated1RM: 87.5, date: today, rpe: 8.5, notes: 'High bar Olympic squat' },
-        { id: 'pr_p2', exercise: 'Standing Overhead Barbell Press', weightKg: 40, reps: 4, estimated1RM: 45.3, date: '2026-11-06', rpe: 8, notes: 'Strict military press' }
-      ];
-      localStorage.setItem(`fitpulse_u_${userId}_fitpulse_prs`, JSON.stringify(priyaPRs));
     }
   },
 
@@ -196,17 +176,6 @@ const AuthManager = {
             console.log(`[Auth] Restored active session for @${user.username} (${user.name})`);
             return user;
           }
-        }
-      }
-
-      // If no session exists, default to Alex so user isn't locked out on first load,
-      // but if user explicitly logs out, currentUser stays null
-      const hasLoggedOut = sessionStorage.getItem('fitpulse_explicit_logout');
-      if (!hasLoggedOut) {
-        const alex = this.getRegisteredUsers().find(u => u.id === 'user_alex');
-        if (alex) {
-          this.login(alex.email, 'password123', true);
-          return alex;
         }
       }
     } catch (err) {
@@ -774,11 +743,6 @@ const AuthManager = {
                 class="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center gap-1.5 transition">
           <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
           <span>Alex Rivera (Powerlifter • 102.5kg Bench)</span>
-        </button>
-        <button type="button" onclick="AuthManager.quickLogin('user_priya')" 
-                class="px-3 py-1.5 rounded-lg bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 text-cyan-800 text-xs font-medium flex items-center gap-1.5 transition">
-          <span class="w-2 h-2 rounded-full bg-cyan-500"></span>
-          <span>Dr. Priya (Clinical Diabetic Diet • 11.4k Steps)</span>
         </button>
       `;
     }

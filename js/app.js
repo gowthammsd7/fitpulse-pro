@@ -97,6 +97,12 @@ const App = {
   },
 
   switchTab(tabId) {
+    // Authentication Guard: Everyone who is not logged in is directed to the Login / Sign Up page
+    const user = window.AuthManager ? AuthManager.getCurrentUser() : null;
+    if (!user && tabId !== 'auth') {
+      tabId = 'auth';
+    }
+
     this.activeTab = tabId;
 
     // Update nav links styling
