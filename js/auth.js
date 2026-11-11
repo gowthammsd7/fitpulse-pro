@@ -1,4 +1,4 @@
-// FitPulse Pro - Authentication & Multi-User Account Manager
+// FitPulse Pro - Authentication, Modal Popup & Account Isolation Engine
 
 const AUTH_KEYS = {
   USERS: 'fitpulse_registered_users',
@@ -10,44 +10,75 @@ const AuthManager = {
   activeMode: 'signin', // 'signin' or 'signup'
 
   init() {
-    this.seedDefaultUsersIfEmpty();
+    this.purgeOldAndDuplicateAccounts();
     this.restoreSession();
     this.bindEvents();
     this.updateHeaderUI();
+
+    // The user requested: "as i click on the link sign in / signup should be popped up" & "no account should be signed in"
+    // Pop up the Sign In / Sign Up modal dialog immediately on page visit if not logged in
+    if (!this.currentUser) {
+      setTimeout(() => {
+        this.openAuthModal('signin');
+      }, 50);
+    }
   },
 
-  // Seed two distinct pre-configured demo users so multi-user switching can be tested immediately
-  seedDefaultUsersIfEmpty() {
-    // Purge any legacy Dr. Priya Sharma accounts or stored keys
+  // Completely wipe Jordan Hayes, Priya Sharma, test accounts, and deduplicate all records
+  purgeOldAndDuplicateAccounts() {
     try {
-      const existing = localStorage.getItem(AUTH_KEYS.USERS);
-      if (existing) {
-        let users = JSON.parse(existing);
-        const filtered = users.filter(u => u.id !== 'user_priya' && u.username !== 'priyaclinical' && u.email !== 'priya@fitpulse.demo');
-        if (filtered.length !== users.length) {
-          localStorage.setItem(AUTH_KEYS.USERS, JSON.stringify(filtered));
-        }
-      }
-      // Purge any storage keys tied to user_priya
-      Object.keys(localStorage).forEach(k => {
-        if (k.includes('user_priya') || k.includes('priyaclinical')) {
-          localStorage.removeItem(k);
-        }
-      });
-      // Clear session if active session was user_priya
-      const sess = localStorage.getItem(AUTH_KEYS.SESSION);
-      if (sess && (sess.includes('user_priya') || sess.includes('priyaclinical'))) {
+      // 1. Force clear any remembered sessions so NO account is signed in on initial load
+      const hasExplicitActiveLogin = sessionStorage.getItem('fitpulse_session_active');
+      if (!hasExplicitActiveLogin) {
         localStorage.removeItem(AUTH_KEYS.SESSION);
         sessionStorage.removeItem(AUTH_KEYS.SESSION);
+        this.currentUser = null;
       }
-    } catch (e) {
-      console.warn('Purge notice:', e);
-    }
 
-    const currentUsers = localStorage.getItem(AUTH_KEYS.USERS);
-    if (!currentUsers) {
-      const defaultUsers = [
-        {
+      // 2. Load existing registered users
+      const raw = localStorage.getItem(AUTH_KEYS.USERS);
+      let users = raw ? JSON.parse(raw) : [];
+
+      // 3. Purge Jordan Hayes, Priya Sharma, and temporary test accounts
+      users = users.filter(u => {
+        if (!u) return false;
+        const name = (u.name || '').toLowerCase();
+        const email = (u.email || '').toLowerCase();
+        const username = (u.username || '').toLowerCase();
+
+        // Remove Jordan Hayes
+        if (name.includes('jordan') || email.includes('jordan') || username.includes('jordan')) {
+          return false;
+        }
+        // Remove Priya Sharma
+        if (name.includes('priya') || email.includes('priya') || username.includes('priya')) {
+          return false;
+        }
+        // Remove dummy test accounts
+        if (username.includes('test') || email.includes('test') || username === 'newuser') {
+          return false;
+        }
+        return true;
+      });
+
+      // 4. Strictly deduplicate users by unique email and unique username
+      const uniqueUsers = [];
+      const seenEmails = new Set();
+      const seenUsernames = new Set();
+
+      for (const u of users) {
+        const em = (u.email || '').toLowerCase().trim();
+        const un = (u.username || '').toLowerCase().trim();
+        if (em && un && !seenEmails.has(em) && !seenUsernames.has(un)) {
+          seenEmails.add(em);
+          seenUsernames.add(un);
+          uniqueUsers.push(u);
+        }
+      }
+
+      // If empty or after purge, keep only single clean baseline template for testing (Alex Rivera)
+      if (uniqueUsers.length === 0) {
+        uniqueUsers.push({
           id: 'user_alex',
           name: 'Alex Rivera',
           email: 'alex@fitpulse.demo',
@@ -60,36 +91,45 @@ const AuthManager = {
           weight: 78,
           height: 180,
           avatarInitials: 'AR',
-          avatarColor: '#059669', // Emerald
+          avatarColor: '#059669',
           createdAt: '2026-10-15T08:00:00.000Z'
+        });
+
+        this.seedUserAccountData('user_alex', {
+          profile: {
+            age: 27,
+            gender: 'male',
+            height: 180,
+            weight: 78,
+            targetWeight: 75,
+            activityLevel: 1.55,
+            goal: 'fat_loss',
+            condition: 'healthy',
+            dietPref: 'omnivore'
+          },
+          targets: {
+            calories: 2150,
+            protein: 170,
+            carbs: 210,
+            fat: 65,
+            waterLiters: 3.5
+          },
+          stepGoal: 10000,
+          todaySteps: 8760
+        });
+      }
+
+      localStorage.setItem(AUTH_KEYS.USERS, JSON.stringify(uniqueUsers));
+
+      // 5. Purge any orphan scoped localStorage keys associated with deleted accounts
+      Object.keys(localStorage).forEach(k => {
+        const kl = k.toLowerCase();
+        if (kl.includes('jordan') || kl.includes('priya') || kl.includes('test')) {
+          localStorage.removeItem(k);
         }
-      ];
-
-      localStorage.setItem(AUTH_KEYS.USERS, JSON.stringify(defaultUsers));
-
-      // Seed account-specific sample data for Alex
-      this.seedUserAccountData('user_alex', {
-        profile: {
-          age: 27,
-          gender: 'male',
-          height: 180,
-          weight: 78,
-          targetWeight: 75,
-          activityLevel: 1.55,
-          goal: 'fat_loss',
-          condition: 'healthy',
-          dietPref: 'omnivore'
-        },
-        targets: {
-          calories: 2150,
-          protein: 170,
-          carbs: 210,
-          fat: 65,
-          waterLiters: 3.5
-        },
-        stepGoal: 10000,
-        todaySteps: 8760
       });
+    } catch (err) {
+      console.warn('Account purge notice:', err);
     }
   },
 
@@ -97,12 +137,10 @@ const AuthManager = {
   seedUserAccountData(userId, config) {
     const today = new Date().toISOString().split('T')[0];
 
-    // Profile & Targets
     localStorage.setItem(`fitpulse_u_${userId}_fitpulse_profile`, JSON.stringify(config.profile));
     localStorage.setItem(`fitpulse_u_${userId}_fitpulse_macro_targets`, JSON.stringify(config.targets));
     localStorage.setItem(`fitpulse_u_${userId}_fitpulse_step_goal`, JSON.stringify(config.stepGoal));
 
-    // Steps
     const stepsLog = {};
     stepsLog[today] = {
       steps: config.todaySteps,
@@ -113,7 +151,6 @@ const AuthManager = {
     };
     localStorage.setItem(`fitpulse_u_${userId}_fitpulse_steps_log`, JSON.stringify(stepsLog));
 
-    // Distinct PRs per user
     if (userId === 'user_alex') {
       const alexPRs = [
         { id: 'pr_a1', exercise: 'Flat Barbell Bench Press', weightKg: 102.5, reps: 3, estimated1RM: 112.8, date: today, rpe: 9.5, notes: 'Paused at chest' },
@@ -157,14 +194,12 @@ const AuthManager = {
     ) || null;
   },
 
-  // Restore active user session from localStorage or sessionStorage
+  // Restore active user session only if explicitly logged in
   restoreSession() {
     try {
-      // First check persistent localStorage (Remember Me)
-      let sessionData = localStorage.getItem(AUTH_KEYS.SESSION);
+      let sessionData = sessionStorage.getItem(AUTH_KEYS.SESSION);
       if (!sessionData) {
-        // Fallback to tab sessionStorage
-        sessionData = sessionStorage.getItem(AUTH_KEYS.SESSION);
+        sessionData = localStorage.getItem(AUTH_KEYS.SESSION);
       }
 
       if (sessionData) {
@@ -190,11 +225,35 @@ const AuthManager = {
     return this.currentUser;
   },
 
+  // Open the Sign In / Sign Up Modal Popup
+  openAuthModal(mode = 'signin') {
+    const modal = document.getElementById('auth-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    this.switchMode(mode);
+    setTimeout(() => {
+      const idInput = document.getElementById('signin-identifier');
+      if (idInput && mode === 'signin') idInput.focus();
+    }, 100);
+  },
+
+  // Close the popup modal (only if authenticated)
+  closeAuthModal() {
+    const modal = document.getElementById('auth-modal');
+    if (!modal) return;
+    if (!this.currentUser) {
+      if (window.Toast) {
+        Toast.show('Please sign in or create an account to enter FitPulse Pro.', 'warning');
+      }
+      return;
+    }
+    modal.classList.add('hidden');
+  },
+
   // Register a new user with duplicate validation
   register(formData) {
     const { name, email, username, password, goal, condition, gender, age, weight, height, rememberMe } = formData;
 
-    // Basic required field validations
     if (!name || !name.trim()) {
       return { success: false, message: 'Please enter your full name.' };
     }
@@ -202,7 +261,7 @@ const AuthManager = {
       return { success: false, message: 'Please enter a valid email address.' };
     }
     if (!username || !username.trim()) {
-      return { success: false, message: 'Please enter a username.' };
+      return { success: false, message: 'Please choose a username.' };
     }
     if (!password || password.length < 4) {
       return { success: false, message: 'Password must be at least 4 characters long.' };
@@ -237,7 +296,6 @@ const AuthManager = {
       };
     }
 
-    // Generate Initials & Avatar Color
     const initials = name.trim().split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'FP';
     const avatarPalette = ['#059669', '#0284c7', '#7c3aed', '#d97706', '#e11d48', '#0891b2'];
     const avatarColor = avatarPalette[Math.floor(Math.random() * avatarPalette.length)];
@@ -247,11 +305,11 @@ const AuthManager = {
       name: name.trim(),
       email: cleanEmail,
       username: cleanUsername,
-      password: password, // client-side local storage demo
+      password: password,
       goal: goal || 'fat_loss',
       condition: condition || 'healthy',
       gender: gender || 'male',
-      age: parseInt(age) || 28,
+      age: parseInt(age) || 26,
       weight: parseFloat(weight) || 75,
       height: parseFloat(height) || 175,
       avatarInitials: initials,
@@ -259,20 +317,20 @@ const AuthManager = {
       createdAt: new Date().toISOString()
     };
 
-    // Save user to registry
     users.push(newUser);
     this.saveRegisteredUsers(users);
 
-    // Initialize clean starter data for this new account
+    // Initialize personal account data
     this.initNewAccountData(newUser);
 
-    // Automatically establish session & log in
+    // Establish session & mark as active
+    sessionStorage.setItem('fitpulse_session_active', 'true');
     this.establishSession(newUser, rememberMe !== false);
 
     return { 
       success: true, 
       user: newUser, 
-      message: `Account created successfully! Welcome to FitPulse Pro, ${newUser.name}.` 
+      message: `Account created! Welcome, ${newUser.name}.` 
     };
   },
 
@@ -280,19 +338,18 @@ const AuthManager = {
   initNewAccountData(user) {
     const today = new Date().toISOString().split('T')[0];
 
-    // Compute tailored initial macro calories using Mifflin-St Jeor
     let bmr;
     if (user.gender === 'female') {
       bmr = 10 * user.weight + 6.25 * user.height - 5 * user.age - 161;
     } else {
       bmr = 10 * user.weight + 6.25 * user.height - 5 * user.age + 5;
     }
-    const tdee = Math.round(bmr * 1.4); // Lightly active default
+    const tdee = Math.round(bmr * 1.4);
     let targetCalories = tdee;
     if (user.goal === 'fat_loss') targetCalories = Math.round(tdee - 450);
     else if (user.goal === 'muscle_gain') targetCalories = Math.round(tdee + 300);
 
-    const proteinGrams = Math.round(user.weight * 2.0); // 2g/kg
+    const proteinGrams = Math.round(user.weight * 2.0);
     const fatGrams = Math.round((targetCalories * 0.25) / 9);
     const carbsGrams = Math.max(50, Math.round((targetCalories - (proteinGrams * 4 + fatGrams * 9)) / 4));
 
@@ -316,7 +373,6 @@ const AuthManager = {
       waterLiters: 3.2
     };
 
-    // Store in scoped user keys
     localStorage.setItem(`fitpulse_u_${user.id}_fitpulse_profile`, JSON.stringify(initialProfile));
     localStorage.setItem(`fitpulse_u_${user.id}_fitpulse_macro_targets`, JSON.stringify(initialTargets));
     localStorage.setItem(`fitpulse_u_${user.id}_fitpulse_step_goal`, JSON.stringify(10000));
@@ -348,7 +404,7 @@ const AuthManager = {
     if (!user) {
       return { 
         success: false, 
-        message: 'No account found with this email or username. Please check your spelling or sign up.' 
+        message: 'No account found with this email or username. Please check spelling or create an account.' 
       };
     }
 
@@ -359,16 +415,7 @@ const AuthManager = {
       };
     }
 
-    // Check if already logged in as this user
-    if (this.currentUser && this.currentUser.id === user.id) {
-      return { 
-        success: true, 
-        user, 
-        alreadyLoggedIn: true,
-        message: `You are already signed in as @${user.username}.` 
-      };
-    }
-
+    sessionStorage.setItem('fitpulse_session_active', 'true');
     this.establishSession(user, rememberMe);
     return { 
       success: true, 
@@ -380,7 +427,6 @@ const AuthManager = {
   // Save session record
   establishSession(user, rememberMe) {
     this.currentUser = user;
-    sessionStorage.removeItem('fitpulse_explicit_logout');
 
     const sessionPayload = {
       userId: user.id,
@@ -407,14 +453,10 @@ const AuthManager = {
     this.currentUser = null;
     localStorage.removeItem(AUTH_KEYS.SESSION);
     sessionStorage.removeItem(AUTH_KEYS.SESSION);
-    sessionStorage.setItem('fitpulse_explicit_logout', 'true');
+    sessionStorage.removeItem('fitpulse_session_active');
 
     this.updateHeaderUI();
-
-    // Switch to Auth page view
-    if (window.App) {
-      App.switchTab('auth');
-    }
+    this.openAuthModal('signin');
 
     if (window.Toast) {
       Toast.show(`Signed out of ${prevUser}'s account.`, 'info');
@@ -423,7 +465,7 @@ const AuthManager = {
     return { success: true };
   },
 
-  // Switch between Sign In and Sign Up tabs on the Auth page
+  // Switch between Sign In and Sign Up tabs
   switchMode(mode) {
     this.activeMode = mode;
     const signinForm = document.getElementById('auth-signin-form');
@@ -441,22 +483,22 @@ const AuthManager = {
       if (signinForm) signinForm.classList.add('hidden');
       if (signupForm) signupForm.classList.remove('hidden');
       if (tabSigninBtn) {
-        tabSigninBtn.classList.remove('bg-emerald-500', 'text-white', 'shadow-sm');
+        tabSigninBtn.classList.remove('bg-emerald-600', 'text-white', 'shadow-sm');
         tabSigninBtn.classList.add('text-slate-600', 'hover:text-slate-900');
       }
       if (tabSignupBtn) {
-        tabSignupBtn.classList.add('bg-emerald-500', 'text-white', 'shadow-sm');
+        tabSignupBtn.classList.add('bg-emerald-600', 'text-white', 'shadow-sm');
         tabSignupBtn.classList.remove('text-slate-600', 'hover:text-slate-900');
       }
     } else {
       if (signupForm) signupForm.classList.add('hidden');
       if (signinForm) signinForm.classList.remove('hidden');
       if (tabSignupBtn) {
-        tabSignupBtn.classList.remove('bg-emerald-500', 'text-white', 'shadow-sm');
+        tabSignupBtn.classList.remove('bg-emerald-600', 'text-white', 'shadow-sm');
         tabSignupBtn.classList.add('text-slate-600', 'hover:text-slate-900');
       }
       if (tabSigninBtn) {
-        tabSigninBtn.classList.add('bg-emerald-500', 'text-white', 'shadow-sm');
+        tabSigninBtn.classList.add('bg-emerald-600', 'text-white', 'shadow-sm');
         tabSigninBtn.classList.remove('text-slate-600', 'hover:text-slate-900');
       }
     }
@@ -470,10 +512,9 @@ const AuthManager = {
     const user = this.currentUser;
 
     if (!user) {
-      // Guest / Signed Out State
       const guestHtml = `
-        <button onclick="App.switchTab('auth')" 
-                class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition">
+        <button onclick="AuthManager.openAuthModal('signin')" 
+                class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition cursor-pointer">
           <span>🔐</span> Sign In / Register
         </button>
       `;
@@ -482,7 +523,6 @@ const AuthManager = {
       return;
     }
 
-    // Signed In State: Render initials badge, name, goal tag, and Sign Out
     const goalLabels = {
       fat_loss: 'Fat Loss',
       muscle_gain: 'Muscle Gain',
@@ -511,7 +551,7 @@ const AuthManager = {
 
         <button onclick="AuthManager.handleLogout()" 
                 title="Sign out of current account"
-                class="px-2.5 py-1.5 text-xs text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg transition font-medium flex items-center gap-1">
+                class="px-2.5 py-1.5 text-xs text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg transition font-medium flex items-center gap-1 cursor-pointer">
           <span>🚪</span><span class="hidden sm:inline">Logout</span>
         </button>
       </div>
@@ -521,9 +561,8 @@ const AuthManager = {
     if (mobileUserContainer) mobileUserContainer.innerHTML = userHtml;
   },
 
-  // Handle logout with confirmation & module reloads
   handleLogout() {
-    if (confirm('Are you sure you want to log out of your FitPulse account? Your data remains securely saved on this device.')) {
+    if (confirm('Are you sure you want to log out? Your personal data remains saved on this browser.')) {
       this.logout();
     }
   },
@@ -535,7 +574,8 @@ const AuthManager = {
 
     const res = this.login(user.email, user.password, true);
     if (res.success) {
-      if (window.Toast) Toast.show(`Switched to ${user.name}'s account!`, 'success');
+      if (window.Toast) Toast.show(`Logged in as ${user.name}!`, 'success');
+      this.closeAuthModal();
       if (window.App) {
         App.reloadAllModules();
         App.switchTab('dashboard');
@@ -545,7 +585,6 @@ const AuthManager = {
 
   // Bind Form Submit & Button Listeners
   bindEvents() {
-    // Sign In Form Submit
     const signinForm = document.getElementById('auth-signin-form');
     if (signinForm) {
       signinForm.addEventListener('submit', (e) => {
@@ -555,7 +594,6 @@ const AuthManager = {
       });
     }
 
-    // Sign Up Form Submit
     const signupForm = document.getElementById('auth-signup-form');
     if (signupForm) {
       signupForm.addEventListener('submit', (e) => {
@@ -586,6 +624,7 @@ const AuthManager = {
     }
 
     if (window.Toast) Toast.show(res.message, 'success');
+    this.closeAuthModal();
     if (window.App) {
       App.reloadAllModules();
       App.switchTab('dashboard');
@@ -633,27 +672,21 @@ const AuthManager = {
     }
 
     if (window.Toast) Toast.show(res.message, 'success');
+    this.closeAuthModal();
     if (window.App) {
       App.reloadAllModules();
       App.switchTab('dashboard');
     }
   },
 
-  // Render the dedicated Account & Authentication page view
+  // Render the dedicated Account tab view
   renderAuthPage() {
     const activeAccountPanel = document.getElementById('active-account-panel');
-    const authFormsContainer = document.getElementById('auth-forms-container');
-    const demoAccountsBar = document.getElementById('auth-demo-accounts');
-    const otherAccountsList = document.getElementById('other-accounts-list');
-
     const user = this.currentUser;
-    const users = this.getRegisteredUsers();
 
-    if (user) {
-      // Show active account panel
-      if (activeAccountPanel) activeAccountPanel.classList.remove('hidden');
+    if (user && activeAccountPanel) {
+      activeAccountPanel.classList.remove('hidden');
 
-      // Populate current user info
       const nameEl = document.getElementById('auth-user-name');
       const userMetaEl = document.getElementById('auth-user-meta');
       const avatarEl = document.getElementById('auth-user-avatar');
@@ -673,7 +706,6 @@ const AuthManager = {
         avatarEl.style.backgroundColor = user.avatarColor || '#059669';
       }
 
-      // Render stats summary for this account
       if (statsEl) {
         const prs = window.StorageManager ? StorageManager.getPRs() : [];
         const todayMeals = window.StorageManager ? StorageManager.getMeals() : [];
@@ -699,63 +731,8 @@ const AuthManager = {
           </div>
         `;
       }
-
-      // Populate list of other registered accounts to switch to
-      if (otherAccountsList) {
-        const others = users.filter(u => u.id !== user.id);
-        if (others.length === 0) {
-          otherAccountsList.innerHTML = `<p class="text-xs text-slate-400 italic">No other registered accounts on this device.</p>`;
-        } else {
-          otherAccountsList.innerHTML = others.map(o => `
-            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition">
-              <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-sm" style="background-color: ${o.avatarColor || '#059669'};">
-                  ${o.avatarInitials || 'FP'}
-                </div>
-                <div>
-                  <div class="text-xs font-bold text-slate-800">${o.name} <span class="text-[10px] text-slate-500 font-normal">(@${o.username})</span></div>
-                  <div class="text-[10px] text-slate-500 capitalize">${o.goal.replace('_', ' ')} • ${o.condition.replace('_', ' ')}</div>
-                </div>
-              </div>
-              <button type="button" onclick="AuthManager.quickLogin('${o.id}')" 
-                      class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition shadow-sm">
-                Switch
-              </button>
-            </div>
-          `).join('');
-        }
-      }
-
-      // Forms container is collapsible when logged in
-      if (authFormsContainer) {
-        authFormsContainer.classList.add('hidden');
-      }
-    } else {
-      // User is logged out
-      if (activeAccountPanel) activeAccountPanel.classList.add('hidden');
-      if (authFormsContainer) authFormsContainer.classList.remove('hidden');
-    }
-
-    // Populate demo account buttons on the sign in form
-    if (demoAccountsBar) {
-      demoAccountsBar.innerHTML = `
-        <button type="button" onclick="AuthManager.quickLogin('user_alex')" 
-                class="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center gap-1.5 transition">
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span>Alex Rivera (Powerlifter • 102.5kg Bench)</span>
-        </button>
-      `;
-    }
-  },
-
-  // Toggle form visibility when user wants to add/switch accounts while logged in
-  toggleAuthForms() {
-    const authFormsContainer = document.getElementById('auth-forms-container');
-    if (authFormsContainer) {
-      authFormsContainer.classList.toggle('hidden');
-      if (!authFormsContainer.classList.contains('hidden')) {
-        authFormsContainer.scrollIntoView({ behavior: 'smooth' });
-      }
+    } else if (!user) {
+      this.openAuthModal('signin');
     }
   },
 

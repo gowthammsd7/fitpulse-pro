@@ -176,203 +176,17 @@
         <div class="pt-4 border-t border-slate-100 space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-              <span>🔄</span> Switch to Another Account
+              <span>🔄</span> Switch Account
             </h3>
-            <button type="button" onclick="AuthManager.toggleAuthForms()" 
-                    class="text-xs text-emerald-600 hover:text-emerald-700 font-bold hover:underline flex items-center gap-1">
-              <span>+</span> Sign In or Register Another User
+            <button type="button" onclick="AuthManager.openAuthModal('signup')" 
+                    class="text-xs text-emerald-600 hover:text-emerald-700 font-bold hover:underline flex items-center gap-1 cursor-pointer">
+              <span>+</span> Register New User
             </button>
           </div>
           <div id="other-accounts-list" class="space-y-2">
             <!-- Dynamically populated list of other registered accounts -->
           </div>
         </div>
-      </div>
-
-      <!-- AUTH FORMS CONTAINER (Sign In / Sign Up) -->
-      <div id="auth-forms-container" class="glass-card p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xl space-y-6">
-
-        <!-- Mode Switcher Tabs -->
-        <div class="flex items-center p-1 rounded-2xl bg-slate-100 border border-slate-200 max-w-sm mx-auto">
-          <button id="tab-btn-signin" type="button" onclick="AuthManager.switchMode('signin')" 
-                  class="flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-emerald-500 text-white shadow-sm">
-            <span>🔑</span> Sign In
-          </button>
-          <button id="tab-btn-signup" type="button" onclick="AuthManager.switchMode('signup')" 
-                  class="flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900">
-            <span>📝</span> Create Account
-          </button>
-        </div>
-
-        <!-- Dynamic Validation Error Alert Banner -->
-        <div id="auth-error-msg" class="hidden p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium leading-relaxed flex items-center gap-2"></div>
-
-        <!-- ================= 1. SIGN IN FORM ================= -->
-        <form id="auth-signin-form" class="space-y-4" onsubmit="event.preventDefault(); AuthManager.handleSignInSubmit(); return false;">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Email Address or Username</label>
-            <input type="text" id="signin-identifier" required 
-                   placeholder="e.g. alex@fitpulse.demo or alexfit"
-                   onkeydown="if(event.key==='Enter'){ AuthManager.handleSignInSubmit(); }"
-                   class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-800 text-sm">
-          </div>
-
-          <div>
-            <div class="flex items-center justify-between mb-1.5">
-              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Password</label>
-              <button type="button" onclick="AuthManager.togglePasswordVisibility('signin-password', this)" class="text-xs text-slate-500 hover:text-slate-800">👁️ Show</button>
-            </div>
-            <input type="password" id="signin-password" required 
-                   placeholder="Enter your account password"
-                   onkeydown="if(event.key==='Enter'){ AuthManager.handleSignInSubmit(); }"
-                   class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-800 text-sm">
-          </div>
-
-          <div class="flex items-center justify-between pt-1">
-            <label class="flex items-center gap-2 cursor-pointer select-none">
-              <input type="checkbox" id="signin-remember" checked 
-                     class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300">
-              <span class="text-xs font-medium text-slate-700">Remember me on this browser</span>
-            </label>
-            <span class="text-[11px] text-slate-400">Zero session loss</span>
-          </div>
-
-          <button type="button" onclick="AuthManager.handleSignInSubmit()" 
-                  class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
-            <span>🔑</span> Sign In to My Account
-          </button>
-
-          <!-- 1-Click Instant Demo Login Pills -->
-          <div class="pt-4 border-t border-slate-100">
-            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">⚡ Or test multi-user switching with demo accounts:</div>
-            <div id="auth-demo-accounts" class="flex flex-wrap gap-2">
-              <!-- Dynamically populated -->
-            </div>
-          </div>
-
-          <div class="text-center pt-2">
-            <p class="text-xs text-slate-500">
-              New to FitPulse? 
-              <button type="button" onclick="AuthManager.switchMode('signup')" class="text-emerald-600 hover:text-emerald-700 font-bold hover:underline ml-1">
-                Create your account here
-              </button>
-            </p>
-          </div>
-        </form>
-
-        <!-- ================= 2. SIGN UP FORM ================= -->
-        <form id="auth-signup-form" class="space-y-4 hidden" onsubmit="event.preventDefault(); AuthManager.handleSignUpSubmit(); return false;">
-          
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Full Name *</label>
-              <input type="text" id="signup-name" required placeholder="e.g. Jordan Hayes"
-                     class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:border-emerald-500 text-slate-800 text-sm">
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Username *</label>
-              <input type="text" id="signup-username" required placeholder="e.g. jordanhayes"
-                     class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:border-emerald-500 text-slate-800 text-sm">
-              <span class="text-[10px] text-slate-500">Must be unique (no duplicate usernames)</span>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Email Address *</label>
-              <input type="email" id="signup-email" required placeholder="e.g. jordan@example.com"
-                     class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:border-emerald-500 text-slate-800 text-sm">
-              <span class="text-[10px] text-slate-500">Must be unique (no duplicate accounts)</span>
-            </div>
-
-            <div>
-              <div class="flex items-center justify-between mb-1.5">
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Password *</label>
-                <button type="button" onclick="AuthManager.togglePasswordVisibility('signup-password', this)" class="text-xs text-slate-500 hover:text-slate-800">👁️ Show</button>
-              </div>
-              <input type="password" id="signup-password" required minlength="4" placeholder="At least 4 characters"
-                     class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:border-emerald-500 text-slate-800 text-sm">
-            </div>
-          </div>
-
-          <!-- Personalized Starter Profile Settings -->
-          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-            <div class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <span>🩺</span> Tailor My Body Protocol & Macros
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Primary Fitness Goal</label>
-                <select id="signup-goal" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs text-slate-800">
-                  <option value="fat_loss" selected>Fat Loss & Calorie Deficit</option>
-                  <option value="muscle_gain">Muscle Hypertrophy & Bulking</option>
-                  <option value="maintenance">Maintenance & Body Recomposition</option>
-                  <option value="endurance">Cardiovascular Endurance & Stamina</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Clinical Health Condition</label>
-                <select id="signup-condition" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs text-slate-800">
-                  <option value="healthy" selected>Healthy / General Fitness</option>
-                  <option value="diabetes_t2">Type-2 Diabetes / Pre-Diabetes</option>
-                  <option value="hypertension">Hypertension (DASH Protocol)</option>
-                  <option value="pcos">PCOS / Hormonal Balance</option>
-                  <option value="cholesterol">High Cholesterol / Dyslipidemia</option>
-                  <option value="gerd">GERD / Acid Reflux</option>
-                  <option value="ckd">Chronic Kidney Disease (CKD)</option>
-                  <option value="celiac">Celiac Disease (Gluten-Free)</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2">
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Sex</label>
-                <select id="signup-gender" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs text-slate-800">
-                  <option value="male" selected>Male</option>
-                  <option value="female">Female</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Age</label>
-                <input type="number" id="signup-age" value="26" min="15" max="99" 
-                       class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs text-slate-800 font-mono">
-              </div>
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Weight (kg)</label>
-                <input type="number" id="signup-weight" value="75" min="30" max="300" step="0.5" 
-                       class="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs text-slate-800 font-mono">
-              </div>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between pt-1">
-            <label class="flex items-center gap-2 cursor-pointer select-none">
-              <input type="checkbox" id="signup-remember" checked 
-                     class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300">
-              <span class="text-xs font-medium text-slate-700">Remember me on this browser</span>
-            </label>
-            <span class="text-[11px] text-emerald-600 font-medium">✓ Isolated data vault</span>
-          </div>
-
-          <button type="button" onclick="AuthManager.handleSignUpSubmit()" 
-                  class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
-            <span>📝</span> Create Account & Save My Info
-          </button>
-
-          <div class="text-center pt-2">
-            <p class="text-xs text-slate-500">
-              Already have an account? 
-              <button type="button" onclick="AuthManager.switchMode('signin')" class="text-emerald-600 hover:text-emerald-700 font-bold hover:underline ml-1">
-                Sign in here
-              </button>
-            </p>
-          </div>
-        </form>
-
       </div>
 
     </section>
@@ -1683,6 +1497,202 @@
 
   <!-- ================= MODALS ================= -->
 
+  <!-- Popup Modal: Authentication (Sign In / Sign Up) -->
+  <div id="auth-modal" class="fixed inset-0 z-[1000000] flex items-center justify-center p-4 modal-backdrop overflow-y-auto">
+    <div class="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 relative my-auto">
+      
+      <!-- Top Branding & Close Button -->
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-400 p-0.5 shadow-md shadow-emerald-500/20">
+            <div class="w-full h-full bg-white rounded-[10px] flex items-center justify-center">
+              <span class="text-lg">⚡</span>
+            </div>
+          </div>
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
+              FitPulse <span class="text-xs px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-bold uppercase">Pro</span>
+            </h3>
+            <p class="text-[11px] text-slate-500">Precision Health & Multi-User Fitness Vault</p>
+          </div>
+        </div>
+        <button type="button" onclick="AuthManager.closeAuthModal()" title="Close" class="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center text-sm transition cursor-pointer">
+          ✕
+        </button>
+      </div>
+
+      <!-- Mode Switcher Tabs (Sign In vs Create Account) -->
+      <div class="flex items-center p-1 rounded-2xl bg-slate-100 border border-slate-200 mb-5">
+        <button id="tab-btn-signin" type="button" onclick="AuthManager.switchMode('signin')" 
+                class="flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 bg-emerald-600 text-white shadow-sm cursor-pointer">
+          <span>🔑</span> Sign In
+        </button>
+        <button id="tab-btn-signup" type="button" onclick="AuthManager.switchMode('signup')" 
+                class="flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-900 cursor-pointer">
+          <span>📝</span> Create Account
+        </button>
+      </div>
+
+      <!-- Dynamic Validation Error Alert Banner -->
+      <div id="auth-error-msg" class="hidden p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium leading-relaxed flex items-center gap-2 mb-4"></div>
+
+      <!-- 1. SIGN IN FORM -->
+      <form id="auth-signin-form" class="space-y-4" onsubmit="event.preventDefault(); AuthManager.handleSignInSubmit(); return false;">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Email Address or Username</label>
+          <input type="text" id="signin-identifier" required 
+                 placeholder="e.g. alex@fitpulse.demo or alexfit"
+                 onkeydown="if(event.key==='Enter'){ AuthManager.handleSignInSubmit(); }"
+                 class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-800 text-sm">
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Password</label>
+            <button type="button" onclick="AuthManager.togglePasswordVisibility('signin-password', this)" class="text-xs text-slate-500 hover:text-slate-800">👁️ Show</button>
+          </div>
+          <input type="password" id="signin-password" required 
+                 placeholder="Enter password"
+                 onkeydown="if(event.key==='Enter'){ AuthManager.handleSignInSubmit(); }"
+                 class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-800 text-sm">
+        </div>
+
+        <div class="flex items-center justify-between pt-1">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" id="signin-remember" checked 
+                   class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300">
+            <span class="text-xs font-medium text-slate-700">Remember me</span>
+          </label>
+          <span class="text-[11px] text-slate-400">Zero session loss</span>
+        </div>
+
+        <button type="button" onclick="AuthManager.handleSignInSubmit()" 
+                class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
+          <span>🔑</span> Sign In
+        </button>
+
+        <div class="text-center pt-2">
+          <p class="text-xs text-slate-500">
+            Don't have an account? 
+            <button type="button" onclick="AuthManager.switchMode('signup')" class="text-emerald-600 hover:text-emerald-700 font-bold hover:underline ml-1">
+              Create account
+            </button>
+          </p>
+        </div>
+      </form>
+
+      <!-- 2. SIGN UP FORM -->
+      <form id="auth-signup-form" class="space-y-3.5 hidden max-h-[60vh] overflow-y-auto pr-1" onsubmit="event.preventDefault(); AuthManager.handleSignUpSubmit(); return false;">
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Full Name *</label>
+            <input type="text" id="signup-name" required placeholder="e.g. Sam Taylor"
+                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-emerald-500 text-slate-800 text-xs">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Username *</label>
+            <input type="text" id="signup-username" required placeholder="e.g. samtaylor"
+                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-emerald-500 text-slate-800 text-xs">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Email Address *</label>
+            <input type="email" id="signup-email" required placeholder="e.g. sam@example.com"
+                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-emerald-500 text-slate-800 text-xs">
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Password *</label>
+              <button type="button" onclick="AuthManager.togglePasswordVisibility('signup-password', this)" class="text-[10px] text-slate-500 hover:text-slate-800">👁️ Show</button>
+            </div>
+            <input type="password" id="signup-password" required minlength="4" placeholder="Min 4 characters"
+                   class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-emerald-500 text-slate-800 text-xs">
+          </div>
+        </div>
+
+        <!-- Customizations -->
+        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+          <div class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+            <span>🩺</span> Body Protocol & Goal
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] font-semibold text-slate-600 mb-0.5">Primary Fitness Goal</label>
+              <select id="signup-goal" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs text-slate-800 bg-white">
+                <option value="fat_loss" selected>Fat Loss & Cutting</option>
+                <option value="muscle_gain">Muscle Hypertrophy & Bulking</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="endurance">Cardio Endurance</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-semibold text-slate-600 mb-0.5">Health Condition</label>
+              <select id="signup-condition" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs text-slate-800 bg-white">
+                <option value="healthy" selected>Healthy / General Fitness</option>
+                <option value="diabetes_t2">Type-2 Diabetes</option>
+                <option value="hypertension">Hypertension</option>
+                <option value="pcos">PCOS</option>
+                <option value="cholesterol">High Cholesterol</option>
+                <option value="gerd">GERD / Reflux</option>
+                <option value="ckd">Kidney Care (CKD)</option>
+                <option value="celiac">Celiac (Gluten-Free)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[10px] font-semibold text-slate-600 mb-0.5">Sex</label>
+              <select id="signup-gender" class="w-full px-2 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-800 bg-white">
+                <option value="male" selected>Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-semibold text-slate-600 mb-0.5">Age</label>
+              <input type="number" id="signup-age" value="26" min="15" max="99" 
+                     class="w-full px-2 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-800 font-mono bg-white">
+            </div>
+            <div>
+              <label class="block text-[10px] font-semibold text-slate-600 mb-0.5">Weight (kg)</label>
+              <input type="number" id="signup-weight" value="75" min="30" max="300" step="0.5" 
+                     class="w-full px-2 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-800 font-mono bg-white">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-1">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" id="signup-remember" checked 
+                   class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300">
+            <span class="text-xs font-medium text-slate-700">Remember me</span>
+          </label>
+          <span class="text-[11px] text-emerald-600 font-medium">✓ Zero duplicate accounts</span>
+        </div>
+
+        <button type="button" onclick="AuthManager.handleSignUpSubmit()" 
+                class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
+          <span>📝</span> Create Account
+        </button>
+
+        <div class="text-center pt-2">
+          <p class="text-xs text-slate-500">
+            Already have an account? 
+            <button type="button" onclick="AuthManager.switchMode('signin')" class="text-emerald-600 hover:text-emerald-700 font-bold hover:underline ml-1">
+              Sign in
+            </button>
+          </p>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
   <!-- Modal 1: Custom Food Modal -->
   <div id="custom-food-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
     <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl relative">
@@ -1977,17 +1987,17 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="js/data.js?v=5"></script>
-  <script src="js/auth.js?v=5"></script>
-  <script src="js/storage.js?v=5"></script>
-  <script src="js/macros.js?v=5"></script>
-  <script src="js/steps.js?v=5"></script>
-  <script src="js/diet.js?v=5"></script>
-  <script src="js/prs.js?v=5"></script>
-  <script src="js/workout.js?v=5"></script>
-  <script src="js/camera.js?v=5"></script>
-  <script src="js/chatbot.js?v=5"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/data.js?v=6"></script>
+  <script src="js/auth.js?v=6"></script>
+  <script src="js/storage.js?v=6"></script>
+  <script src="js/macros.js?v=6"></script>
+  <script src="js/steps.js?v=6"></script>
+  <script src="js/diet.js?v=6"></script>
+  <script src="js/prs.js?v=6"></script>
+  <script src="js/workout.js?v=6"></script>
+  <script src="js/camera.js?v=6"></script>
+  <script src="js/chatbot.js?v=6"></script>
+  <script src="js/app.js?v=6"></script>
 
 </body>
 </html>

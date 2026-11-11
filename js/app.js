@@ -21,7 +21,7 @@ const App = {
     if (currentUser) {
       this.switchTab('dashboard');
     } else {
-      this.switchTab('auth');
+      if (window.AuthManager) AuthManager.openAuthModal('signin');
     }
 
     console.log('FitPulse Pro initialized successfully.');
@@ -97,10 +97,11 @@ const App = {
   },
 
   switchTab(tabId) {
-    // Authentication Guard: Everyone who is not logged in is directed to the Login / Sign Up page
+    // Authentication Guard: When not logged in, immediately pop up Sign In / Sign Up modal
     const user = window.AuthManager ? AuthManager.getCurrentUser() : null;
-    if (!user && tabId !== 'auth') {
-      tabId = 'auth';
+    if (!user) {
+      if (window.AuthManager) AuthManager.openAuthModal('signin');
+      return;
     }
 
     this.activeTab = tabId;
